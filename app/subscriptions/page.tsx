@@ -2,12 +2,15 @@
 
 import { gql, useMutation, useQuery } from "@apollo/client";
 import {
+  addDays,
   addMonths,
   addYears,
   format,
   getDaysInMonth,
   subDays,
+  subMonths,
   parseISO,
+  subYears,
 } from "date-fns";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -126,6 +129,12 @@ const nextCadenceDate = (date: Date, cadence: FormState["cadence"]): Date => {
   return addMonths(date, 1);
 };
 
+const prevCadenceDate = (date: Date, cadence: FormState["cadence"]): Date => {
+  if (cadence === "quarterly") return subMonths(date, 3);
+  if (cadence === "annually") return subYears(date, 1);
+  return subMonths(date, 1);
+};
+
 const computeNextDueDate = (
   startDate?: string | null,
   billingDay?: number | null,
@@ -147,6 +156,37 @@ const computeNextDueDate = (
   if (candidate < anchor) {
     candidate = makeCandidate(nextCadenceDate(anchor, cadence));
   }
+
+  return format(candidate, "yyyy-MM-dd");
+};
+
+const computeLastPaidOn = (
+  startDate?: string | null,
+  billingDay?: number | null,
+  cadence: FormState["cadence"] = "monthly",
+  uptoDate: Date = new Date()
+): string | null => {
+  if (!startDate) return null;
+  const billDay = billingDay && billingDay > 0 ? billingDay : 1;
+  const start = parseISO(startDate);
+
+  if (start > uptoDate) return null;
+
+  const makeCandidate = (base: Date) => {
+    const days = getDaysInMonth(base);
+    const day = Math.min(billDay, days);
+    return new Date(base.getFullYear(), base.getMonth(), day);
+  };
+
+  let base = uptoDate;
+  let candidate = makeCandidate(base);
+
+  while (candidate > uptoDate) {
+    base = prevCadenceDate(base, cadence);
+    candidate = makeCandidate(base);
+  }
+
+  if (candidate < start) return null;
 
   return format(candidate, "yyyy-MM-dd");
 };
@@ -259,8 +299,18 @@ export default function SubscriptionsPage() {
 
     setFormError("");
 
-    const status =
-      new Date(form.startDate) > new Date() ? "not_started" : "active";
+    const now = new Date();
+    const status = new Date(form.startDate) > now ? "not_started" : "active";
+    const inferredLastPaidOn =
+      status === "active"
+        ? computeLastPaidOn(form.startDate, billingDayNumber, form.cadence, now)
+        : null;
+    const nextDueDate = computeNextDueDate(
+      form.startDate,
+      billingDayNumber,
+      form.cadence,
+      inferredLastPaidOn ? addDays(parseISO(inferredLastPaidOn), 1) : now
+    );
     try {
       await insertSubscription({
         variables: {
@@ -271,12 +321,8 @@ export default function SubscriptionsPage() {
             cadence: form.cadence,
             billing_day: billingDayNumber,
             start_date: form.startDate,
-            next_due_date: computeNextDueDate(
-              form.startDate,
-              billingDayNumber,
-              form.cadence
-            ),
-            last_paid_on: null,
+            next_due_date: nextDueDate,
+            last_paid_on: inferredLastPaidOn,
             end_date: null,
             bank: form.bank || null,
             status,
@@ -362,6 +408,20 @@ export default function SubscriptionsPage() {
       ? "not_started"
       : "active";
 
+    const shouldBackfillLastPaidOn =
+      status === "active" && !sub.last_paid_on && !sub.end_date;
+    const inferredLastPaidOn = shouldBackfillLastPaidOn
+      ? computeLastPaidOn(
+          editForm.startDate,
+          billingDayNumber,
+          editForm.cadence,
+          new Date()
+        )
+      : null;
+    const nextDueFromDate = inferredLastPaidOn
+      ? addDays(parseISO(inferredLastPaidOn), 1)
+      : new Date();
+
     try {
       await updateSubscription({
         variables: {
@@ -376,8 +436,12 @@ export default function SubscriptionsPage() {
             next_due_date: computeNextDueDate(
               editForm.startDate,
               billingDayNumber,
-              editForm.cadence
+              editForm.cadence,
+              nextDueFromDate
             ),
+            ...(shouldBackfillLastPaidOn && inferredLastPaidOn
+              ? { last_paid_on: inferredLastPaidOn }
+              : {}),
             bank: editForm.bank || null,
             status,
           },
