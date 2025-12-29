@@ -336,39 +336,47 @@ export default function DashboardPage() {
   }, [expenses, categoryNames]);
 
   const salaryCurrent = form.salaryAmount || record?.salary_amount || "";
-  const disposableCalc =
+  const salaryNumber =
     salaryCurrent && !Number.isNaN(parseFloat(String(salaryCurrent)))
-      ? parseFloat(String(salaryCurrent)) - totalFixed
+      ? parseFloat(String(salaryCurrent))
       : undefined;
-  const disposableStored = record?.disposable_income
-    ? parseFloat(record.disposable_income)
-    : undefined;
-  const recordRemaining = record?.remaining_balance
-    ? parseFloat(record.remaining_balance)
-    : undefined;
+
+  // Disposable = Salary - Fixed
+  const disposableCalc =
+    salaryNumber !== undefined ? salaryNumber - totalFixed : undefined;
+
+  // For current month: always show live-calculated values
+  // For past months: use stored/frozen values
   const disposableDisplay =
-    disposableStored !== undefined ? disposableStored : disposableCalc;
+    isCurrentMonth || !record?.disposable_income
+      ? disposableCalc
+      : parseFloat(record.disposable_income);
+
   const remainingDisplay =
-    recordRemaining !== undefined
-      ? recordRemaining
-      : disposableDisplay !== undefined
-      ? disposableDisplay - variableSpent
-      : undefined;
+    isCurrentMonth || !record?.remaining_balance
+      ? disposableCalc !== undefined
+        ? disposableCalc - variableSpent
+        : undefined
+      : parseFloat(record.remaining_balance);
+
   const saveMonth = async () => {
-    const salaryTrim = form.salaryAmount.trim();
-    if (!salaryTrim) return;
+    // Use form value if provided, otherwise use stored salary for recalc
+    const salaryToSave =
+      form.salaryAmount.trim() || record?.salary_amount || "";
+    if (!salaryToSave) return;
+
+    const salaryNum = parseFloat(salaryToSave);
+    const disposable = salaryNum - totalFixed;
+    const remaining = disposable - variableSpent;
 
     const payload = {
       user_id: DUMMY_USER_ID,
       year_month: selectedMonth,
-      salary_amount: salaryTrim,
+      salary_amount: salaryToSave,
       savings_amount: savingsTotal.toString(),
       total_fixed_expenses: totalFixed.toString(),
-      disposable_income: disposableCalc?.toString() ?? null,
-      remaining_balance:
-        disposableCalc !== undefined
-          ? (disposableCalc - variableSpent).toString()
-          : null,
+      disposable_income: disposable.toString(),
+      remaining_balance: remaining.toString(),
     };
 
     if (record?.id) {
