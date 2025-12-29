@@ -1,0 +1,15 @@
+query GetCategories($userId: UUID!) {
+  categoriesCollection(
+    filter: { or: [{ user_id: { eq: $userId } }, { is_system: { eq: true } }] }
+    orderBy: [{ is_system: DescNullsLast }, { name: AscNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        name
+        type
+        is_system
+      }
+    }
+  }
+}

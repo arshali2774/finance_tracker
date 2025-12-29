@@ -1,0 +1,17 @@
+query GetDailyExpenses($userId: UUID!, $yearMonth: Date!) {
+  daily_expensesCollection(
+    filter: { user_id: { eq: $userId }, year_month: { eq: $yearMonth } }
+    orderBy: [{ expense_date: DescNullsLast }, { created_at: DescNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        expense_date
+        amount
+        category_id
+        description
+        created_at
+      }
+    }
+  }
+}

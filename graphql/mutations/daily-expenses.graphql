@@ -1,0 +1,8 @@
+mutation InsertDailyExpenseDoc($input: daily_expensesInsertInput!) {
+  insertIntodaily_expensesCollection(objects: [$input]) {
+    records {
+      id
+      expense_date
+    }
+  }
+}

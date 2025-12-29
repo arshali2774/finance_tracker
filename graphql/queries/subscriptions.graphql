@@ -1,0 +1,21 @@
+query GetSubscriptions($userId: UUID!) {
+  subscriptionsCollection(
+    filter: { user_id: { eq: $userId } }
+    orderBy: [{ status: AscNullsLast }, { created_at: DescNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        name
+        amount
+        cadence
+        billing_day
+        start_date
+        next_due_date
+        bank
+        status
+        created_at
+      }
+    }
+  }
+}

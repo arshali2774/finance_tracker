@@ -1,0 +1,24 @@
+mutation InsertMonthlyRecord($input: monthly_recordsInsertInput!) {
+  insertIntomonthly_recordsCollection(objects: [$input]) {
+    records {
+      id
+      year_month
+    }
+  }
+}
+
+mutation UpdateMonthlyRecord(
+  $userId: UUID!
+  $yearMonth: Date!
+  $set: monthly_recordsUpdateInput!
+) {
+  updatemonthly_recordsCollection(
+    set: $set
+    filter: { user_id: { eq: $userId }, year_month: { eq: $yearMonth } }
+  ) {
+    records {
+      id
+      year_month
+    }
+  }
+}

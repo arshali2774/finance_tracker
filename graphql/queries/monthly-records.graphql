@@ -1,0 +1,19 @@
+query GetMonthlyRecord($userId: UUID!, $yearMonth: Date!) {
+  monthly_recordsCollection(
+    filter: { user_id: { eq: $userId }, year_month: { eq: $yearMonth } }
+    first: 1
+  ) {
+    edges {
+      node {
+        id
+        year_month
+        salary_amount
+        savings_amount
+        total_fixed_expenses
+        disposable_income
+        remaining_balance
+        created_at
+      }
+    }
+  }
+}

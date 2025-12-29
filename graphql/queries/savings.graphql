@@ -1,0 +1,25 @@
+query GetSavings($userId: UUID!) {
+  savingsCollection(
+    filter: { user_id: { eq: $userId } }
+    orderBy: [{ status: AscNullsLast }, { created_at: DescNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        name
+        monthly_amount
+        source_bank
+        destination_bank
+        status
+        start_date
+        end_date
+        target_months
+        transfers_made
+        last_transferred_on
+        pause_requested_on
+        resume_requested_on
+        created_at
+      }
+    }
+  }
+}

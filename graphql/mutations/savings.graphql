@@ -1,0 +1,10 @@
+mutation InsertSavings($input: savingsInsertInput!) {
+  insertIntosavingsCollection(objects: [$input]) {
+    records {
+      id
+      name
+      status
+      created_at
+    }
+  }
+}

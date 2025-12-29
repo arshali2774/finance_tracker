@@ -1,0 +1,27 @@
+query GetEmis($userId: UUID!) {
+  emisCollection(
+    filter: { user_id: { eq: $userId } }
+    orderBy: [
+      { status: AscNullsLast }
+      { end_date: AscNullsLast }
+      { created_at: DescNullsLast }
+    ]
+  ) {
+    edges {
+      node {
+        id
+        name
+        emi_amount
+        total_amount
+        down_payment
+        start_date
+        end_date
+        billing_day
+        next_due_date
+        bank
+        status
+        created_at
+      }
+    }
+  }
+}
